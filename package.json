@@ -1,0 +1,47 @@
+{
+  "name": "color-value-tools",
+  "version": "1.0.0",
+  "description": "A tiny utility library for parsing, converting, and manipulating color values across common formats (hex, RGB, HSL, HSV, Lab, CMYK) and CSS variables.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/macrulezru/color-value-tools.git"
+  },
+  "homepage": "https://macrulez.ru/#/en",
+  "bugs": {
+    "url": "https://github.com/macrulezru/color-value-tools/issues"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "css",
+    "gradient",
+    "linear-gradient",
+    "radial-gradient",
+    "conic-gradient",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/vue": "^1.0.31",
+    "@vue/reactivity": "^3.5.27",
+    "@vue/runtime-core": "^3.5.27",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.27"
+  }
+}
