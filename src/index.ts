@@ -85,7 +85,7 @@ export function hexToHsl(hex: string): [number, number, number] {
 }
 
 export function hslToHex(h: number, s: number, l: number): string {
-  h = h % 360;
+  h = ((h % 360) + 360) % 360;
   s = Math.max(0, Math.min(100, s)) / 100;
   l = Math.max(0, Math.min(100, l)) / 100;
   const c = (1 - Math.abs(2 * l - 1)) * s;
@@ -123,7 +123,7 @@ export function adjustHexBrightness(hex: string, offsetPercent: number): string 
 
 export function rotateHue(hex: string, degrees: number): string {
   const [h, s, l] = hexToHsl(hex);
-  const newH = (h + degrees) % 360;
+  const newH = ((h + degrees) % 360 + 360) % 360;
   return hslToHex(newH, s, l);
 }
 
