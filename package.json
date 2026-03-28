@@ -1,6 +1,6 @@
 {
   "name": "color-value-tools",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A tiny utility library for parsing, converting, and manipulating color values across common formats (hex, RGB, HSL, HSV, Lab, CMYK) and CSS variables.",
   "repository": {
     "type": "git",
