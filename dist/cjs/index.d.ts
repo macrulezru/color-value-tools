@@ -12,6 +12,14 @@ export declare function hexToHsl(hex: string): [number, number, number];
 export declare function hslToHex(h: number, s: number, l: number): string;
 export declare function adjustHexBrightness(hex: string, offsetPercent: number): string;
 export declare function rotateHue(hex: string, degrees: number): string;
+export declare function lighten(color: string, amount: number): string;
+export declare function darken(color: string, amount: number): string;
+export declare function saturate(color: string, amount: number): string;
+export declare function desaturate(color: string, amount: number): string;
+export declare function setAlpha(color: string, alpha: number): string;
+export declare function getAlpha(color: string): number;
+export declare function invertColor(color: string): string;
+export declare function grayscale(color: string): string;
 export declare function rgbToHex({ r, g, b }: {
     r: number;
     g: number;
@@ -137,6 +145,13 @@ export declare function normalizeColor(input: string | {
     v?: undefined;
     raw?: undefined;
 };
+export declare function complement(color: string): string;
+export declare function triadic(color: string): [string, string, string];
+export declare function analogous(color: string, angle?: number): [string, string, string];
+export declare function splitComplementary(color: string): [string, string, string];
+export declare function tetradic(color: string): [string, string, string, string];
+export declare function colorShades(color: string, steps?: number): string[];
+export declare function monochromatic(color: string, steps?: number): string[];
 export declare function mixColors(c1: string, c2: string, t: number, opts?: {
     mode?: 'rgb' | 'hsl';
     format?: 'hex' | 'rgb' | 'rgba' | 'hsl';
@@ -201,3 +216,68 @@ export declare function lchToRgb({ L, C, H }: {
     g: number;
     b: number;
 };
+export type WcagLevel = 'AAA' | 'AA' | 'AA-large' | 'fail';
+export declare function wcagLevel(foreground: string, background: string): WcagLevel;
+export declare function bestTextColor(background: string): '#000000' | '#ffffff';
+export declare function bestContrastColor(background: string, candidates: string[]): string;
+export declare function rgbToHwb({ r, g, b }: {
+    r: number;
+    g: number;
+    b: number;
+}): [number, number, number];
+export declare function hwbToRgb(H: number, W: number, B: number): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function toHwbString(H: number, W: number, B: number, alpha?: number): string;
+export declare function parseHwbString(str: string): {
+    H: number;
+    W: number;
+    B: number;
+    alpha: number;
+} | null;
+export declare function rgbToOklab({ r, g, b }: {
+    r: number;
+    g: number;
+    b: number;
+}): {
+    L: number;
+    a: number;
+    b: number;
+};
+export declare function oklabToRgb({ L, a, b }: {
+    L: number;
+    a: number;
+    b: number;
+}): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function rgbToOklch({ r, g, b }: {
+    r: number;
+    g: number;
+    b: number;
+}): {
+    L: number;
+    C: number;
+    H: number;
+};
+export declare function oklchToRgb({ L, C, H }: {
+    L: number;
+    C: number;
+    H: number;
+}): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function toHslString(h: number, s: number, l: number, alpha?: number): string;
+export declare function colorDeltaE(c1: string, c2: string): number;
+export declare function randomColor(options?: {
+    hRange?: [number, number];
+    sRange?: [number, number];
+    lRange?: [number, number];
+}): string;
+export declare function toNearestNamedColor(color: string): string;

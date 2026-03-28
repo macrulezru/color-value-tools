@@ -1,5 +1,41 @@
 export type ColorType = 'hex' | 'css-var' | 'rgb' | 'hsl' | 'named' | 'unknown';
 
+const NAMED_COLORS: Record<string, string> = {
+  aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',azure:'#f0ffff',
+  beige:'#f5f5dc',bisque:'#ffe4c4',black:'#000000',blanchedalmond:'#ffebcd',blue:'#0000ff',
+  blueviolet:'#8a2be2',brown:'#a52a2a',burlywood:'#deb887',cadetblue:'#5f9ea0',chartreuse:'#7fff00',
+  chocolate:'#d2691e',coral:'#ff7f50',cornflowerblue:'#6495ed',cornsilk:'#fff8dc',crimson:'#dc143c',
+  cyan:'#00ffff',darkblue:'#00008b',darkcyan:'#008b8b',darkgoldenrod:'#b8860b',darkgray:'#a9a9a9',
+  darkgreen:'#006400',darkgrey:'#a9a9a9',darkkhaki:'#bdb76b',darkmagenta:'#8b008b',darkolivegreen:'#556b2f',
+  darkorange:'#ff8c00',darkorchid:'#9932cc',darkred:'#8b0000',darksalmon:'#e9967a',darkseagreen:'#8fbc8f',
+  darkslateblue:'#483d8b',darkslategray:'#2f4f4f',darkslategrey:'#2f4f4f',darkturquoise:'#00ced1',
+  darkviolet:'#9400d3',deeppink:'#ff1493',deepskyblue:'#00bfff',dimgray:'#696969',dimgrey:'#696969',
+  dodgerblue:'#1e90ff',firebrick:'#b22222',floralwhite:'#fffaf0',forestgreen:'#228b22',fuchsia:'#ff00ff',
+  gainsboro:'#dcdcdc',ghostwhite:'#f8f8ff',gold:'#ffd700',goldenrod:'#daa520',gray:'#808080',
+  green:'#008000',greenyellow:'#adff2f',grey:'#808080',honeydew:'#f0fff0',hotpink:'#ff69b4',
+  indianred:'#cd5c5c',indigo:'#4b0082',ivory:'#fffff0',khaki:'#f0e68c',lavender:'#e6e6fa',
+  lavenderblush:'#fff0f5',lawngreen:'#7cfc00',lemonchiffon:'#fffacd',lightblue:'#add8e6',lightcoral:'#f08080',
+  lightcyan:'#e0ffff',lightgoldenrodyellow:'#fafad2',lightgray:'#d3d3d3',lightgreen:'#90ee90',
+  lightgrey:'#d3d3d3',lightpink:'#ffb6c1',lightsalmon:'#ffa07a',lightseagreen:'#20b2aa',lightskyblue:'#87cefa',
+  lightslategray:'#778899',lightslategrey:'#778899',lightsteelblue:'#b0c4de',lightyellow:'#ffffe0',
+  lime:'#00ff00',limegreen:'#32cd32',linen:'#faf0e6',magenta:'#ff00ff',maroon:'#800000',
+  mediumaquamarine:'#66cdaa',mediumblue:'#0000cd',mediumorchid:'#ba55d3',mediumpurple:'#9370db',
+  mediumseagreen:'#3cb371',mediumslateblue:'#7b68ee',mediumspringgreen:'#00fa9a',mediumturquoise:'#48d1cc',
+  mediumvioletred:'#c71585',midnightblue:'#191970',mintcream:'#f5fffa',mistyrose:'#ffe4e1',moccasin:'#ffe4b5',
+  navajowhite:'#ffdead',navy:'#000080',oldlace:'#fdf5e6',olive:'#808000',olivedrab:'#6b8e23',
+  orange:'#ffa500',orangered:'#ff4500',orchid:'#da70d6',palegoldenrod:'#eee8aa',palegreen:'#98fb98',
+  paleturquoise:'#afeeee',palevioletred:'#db7093',papayawhip:'#ffefd5',peachpuff:'#ffdab9',peru:'#cd853f',
+  pink:'#ffc0cb',plum:'#dda0dd',powderblue:'#b0e0e6',purple:'#800080',rebeccapurple:'#663399',
+  red:'#ff0000',rosybrown:'#bc8f8f',royalblue:'#4169e1',saddlebrown:'#8b4513',salmon:'#fa8072',
+  sandybrown:'#f4a460',seagreen:'#2e8b57',seashell:'#fff5ee',sienna:'#a0522d',silver:'#c0c0c0',
+  skyblue:'#87ceeb',slateblue:'#6a5acd',slategray:'#708090',slategrey:'#708090',snow:'#fffafa',
+  springgreen:'#00ff7f',steelblue:'#4682b4',tan:'#d2b48c',teal:'#008080',thistle:'#d8bfd8',
+  tomato:'#ff6347',turquoise:'#40e0d0',violet:'#ee82ee',wheat:'#f5deb3',white:'#ffffff',
+  whitesmoke:'#f5f5f5',yellow:'#ffff00',yellowgreen:'#9acd32',
+  // Special CSS keywords
+  transparent:'transparent',currentcolor:'currentcolor',inherit:'inherit',initial:'initial',unset:'unset',
+};
+
 export function isCssVariable(value: string): boolean {
   return value.trim().startsWith('var(--');
 }
@@ -25,10 +61,7 @@ export function getColorType(value: string): ColorType {
   if (isHexColor(trimmed)) return 'hex';
   if (isRgbColor(trimmed)) return 'rgb';
   if (isHslColor(trimmed)) return 'hsl';
-  const namedColors = [
-    'transparent','currentcolor','inherit','initial','unset','black','white','red','green','blue','yellow','purple','orange','gray','grey','pink','brown','cyan','magenta','violet','aqua','beige','coral','gold','indigo','ivory','khaki','lavender','lime','maroon','navy','olive','orchid','plum','salmon','silver','tan','teal','tomato','wheat',
-  ];
-  if (namedColors.includes(trimmed)) return 'named';
+  if (trimmed in NAMED_COLORS) return 'named';
   return 'unknown';
 }
 
@@ -125,6 +158,70 @@ export function rotateHue(hex: string, degrees: number): string {
   const [h, s, l] = hexToHsl(hex);
   const newH = ((h + degrees) % 360 + 360) % 360;
   return hslToHex(newH, s, l);
+}
+
+export function lighten(color: string, amount: number): string {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const s = n.s ?? 0;
+  const l = Math.min(100, (n.l ?? 0) + amount);
+  return hslToHex(h, s, l);
+}
+
+export function darken(color: string, amount: number): string {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const s = n.s ?? 0;
+  const l = Math.max(0, (n.l ?? 0) - amount);
+  return hslToHex(h, s, l);
+}
+
+export function saturate(color: string, amount: number): string {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const s = Math.min(100, (n.s ?? 0) + amount);
+  const l = n.l ?? 0;
+  return hslToHex(h, s, l);
+}
+
+export function desaturate(color: string, amount: number): string {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const s = Math.max(0, (n.s ?? 0) - amount);
+  const l = n.l ?? 0;
+  return hslToHex(h, s, l);
+}
+
+export function setAlpha(color: string, alpha: number): string {
+  const n = normalizeColor(color);
+  const r = n.r ?? 0;
+  const g = n.g ?? 0;
+  const b = n.b ?? 0;
+  const a = Math.max(0, Math.min(1, alpha));
+  return `rgba(${r}, ${g}, ${b}, ${+a.toFixed(3)})`;
+}
+
+export function getAlpha(color: string): number {
+  const n = normalizeColor(color);
+  return n.a ?? 1;
+}
+
+export function invertColor(color: string): string {
+  const n = normalizeColor(color);
+  const r = 255 - (n.r ?? 0);
+  const g = 255 - (n.g ?? 0);
+  const b = 255 - (n.b ?? 0);
+  return rgbToHex({ r, g, b });
+}
+
+export function grayscale(color: string): string {
+  const n = normalizeColor(color);
+  const r = n.r ?? 0;
+  const g = n.g ?? 0;
+  const b = n.b ?? 0;
+  // Perceptual luminance weights (ITU-R BT.709)
+  const gray = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+  return rgbToHex({ r: gray, g: gray, b: gray });
 }
 
 function clamp01(v: number) { return Math.max(0, Math.min(1, v)); }
@@ -335,6 +432,54 @@ export function normalizeColor(input: string | { r: number; g: number; b: number
   return { type: 'unknown' };
 }
 
+export function complement(color: string): string {
+  return rotateHue(normalizeColor(color).hex ?? '#000000', 180);
+}
+
+export function triadic(color: string): [string, string, string] {
+  const hex = normalizeColor(color).hex ?? '#000000';
+  return [hex, rotateHue(hex, 120), rotateHue(hex, 240)];
+}
+
+export function analogous(color: string, angle: number = 30): [string, string, string] {
+  const hex = normalizeColor(color).hex ?? '#000000';
+  return [rotateHue(hex, -angle), hex, rotateHue(hex, angle)];
+}
+
+export function splitComplementary(color: string): [string, string, string] {
+  const hex = normalizeColor(color).hex ?? '#000000';
+  return [hex, rotateHue(hex, 150), rotateHue(hex, 210)];
+}
+
+export function tetradic(color: string): [string, string, string, string] {
+  const hex = normalizeColor(color).hex ?? '#000000';
+  return [hex, rotateHue(hex, 90), rotateHue(hex, 180), rotateHue(hex, 270)];
+}
+
+export function colorShades(color: string, steps: number = 9): string[] {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const s = n.s ?? 0;
+  const result: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    const l = Math.round(100 - (i / (steps - 1)) * 100);
+    result.push(hslToHex(h, s, l));
+  }
+  return result;
+}
+
+export function monochromatic(color: string, steps: number = 5): string[] {
+  const n = normalizeColor(color);
+  const h = n.h ?? 0;
+  const l = n.l ?? 50;
+  const result: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    const s = Math.round((i / (steps - 1)) * 100);
+    result.push(hslToHex(h, s, l));
+  }
+  return result;
+}
+
 export function mixColors(c1: string, c2: string, t: number, opts?: { mode?: 'rgb' | 'hsl'; format?: 'hex' | 'rgb' | 'rgba' | 'hsl' }): string {
   const o1 = normalizeColor(c1);
   const o2 = normalizeColor(c2);
@@ -483,4 +628,214 @@ export function lchToRgb({ L, C, H }: { L: number; C: number; H: number }) {
   const a = Math.cos(H * Math.PI / 180) * C;
   const b = Math.sin(H * Math.PI / 180) * C;
   return labToRgb({ L, a, b });
+}
+
+// ─── WCAG Accessibility ───────────────────────────────────────────────────────
+
+export type WcagLevel = 'AAA' | 'AA' | 'AA-large' | 'fail';
+
+export function wcagLevel(foreground: string, background: string): WcagLevel {
+  const ratio = contrastRatio(foreground, background);
+  if (ratio >= 7) return 'AAA';
+  if (ratio >= 4.5) return 'AA';
+  if (ratio >= 3) return 'AA-large';
+  return 'fail';
+}
+
+export function bestTextColor(background: string): '#000000' | '#ffffff' {
+  const onBlack = contrastRatio(background, '#000000');
+  const onWhite = contrastRatio(background, '#ffffff');
+  return onBlack >= onWhite ? '#000000' : '#ffffff';
+}
+
+export function bestContrastColor(background: string, candidates: string[]): string {
+  let best = candidates[0];
+  let bestRatio = -1;
+  for (const c of candidates) {
+    const ratio = contrastRatio(background, c);
+    if (ratio > bestRatio) { bestRatio = ratio; best = c; }
+  }
+  return best;
+}
+
+// ─── HWB ─────────────────────────────────────────────────────────────────────
+
+export function rgbToHwb({ r, g, b }: { r: number; g: number; b: number }): [number, number, number] {
+  const rd = r / 255, gd = g / 255, bd = b / 255;
+  const max = Math.max(rd, gd, bd), min = Math.min(rd, gd, bd);
+  const w = min;
+  const bl = 1 - max;
+  let h = 0;
+  if (max !== min) {
+    const d = max - min;
+    switch (max) {
+      case rd: h = (gd - bd) / d + (gd < bd ? 6 : 0); break;
+      case gd: h = (bd - rd) / d + 2; break;
+      case bd: h = (rd - gd) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [Math.round(h * 360), Math.round(w * 100), Math.round(bl * 100)];
+}
+
+export function hwbToRgb(H: number, W: number, B: number): { r: number; g: number; b: number } {
+  H = ((H % 360) + 360) % 360;
+  const w = W / 100, b = B / 100;
+  if (w + b >= 1) {
+    const gray = Math.round((w / (w + b)) * 255);
+    return { r: gray, g: gray, b: gray };
+  }
+  const { r, g, b: rb } = hslToRgb(H, 100, 50);
+  const factor = 1 - w - b;
+  return {
+    r: Math.round(r / 255 * factor * 255 + w * 255),
+    g: Math.round(g / 255 * factor * 255 + w * 255),
+    b: Math.round(rb / 255 * factor * 255 + w * 255),
+  };
+}
+
+export function toHwbString(H: number, W: number, B: number, alpha?: number): string {
+  if (alpha !== undefined) return `hwb(${H} ${W}% ${B}% / ${+alpha.toFixed(3)})`;
+  return `hwb(${H} ${W}% ${B}%)`;
+}
+
+export function parseHwbString(str: string): { H: number; W: number; B: number; alpha: number } | null {
+  const m = str.trim().match(/hwb\(\s*([\d.+-]+)\s+([\d.]+)%\s+([\d.]+)%(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if (!m) return null;
+  return { H: parseFloat(m[1]), W: parseFloat(m[2]), B: parseFloat(m[3]), alpha: m[4] !== undefined ? parseFloat(m[4]) : 1 };
+}
+
+// ─── OKLCH / OKLAB ───────────────────────────────────────────────────────────
+
+function srgbToOkLinear(v: number): number {
+  v = v / 255;
+  return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+}
+
+function okLinearToSrgb(v: number): number {
+  const t = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return Math.round(Math.max(0, Math.min(1, t)) * 255);
+}
+
+export function rgbToOklab({ r, g, b }: { r: number; g: number; b: number }): { L: number; a: number; b: number } {
+  const R = srgbToOkLinear(r), G = srgbToOkLinear(g), B = srgbToOkLinear(b);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return {
+    L: 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  };
+}
+
+export function oklabToRgb({ L, a, b }: { L: number; a: number; b: number }): { r: number; g: number; b: number } {
+  const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+  const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+  const s = Math.pow(L - 0.0894841775 * a - 1.2914855480 * b, 3);
+  const R = okLinearToSrgb(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s);
+  const G = okLinearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s);
+  const B = okLinearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+  return { r: R, g: G, b: B };
+}
+
+export function rgbToOklch({ r, g, b }: { r: number; g: number; b: number }): { L: number; C: number; H: number } {
+  const { L, a, b: bb } = rgbToOklab({ r, g, b });
+  const C = Math.sqrt(a * a + bb * bb);
+  let H = Math.atan2(bb, a) * (180 / Math.PI);
+  if (H < 0) H += 360;
+  return { L, C, H };
+}
+
+export function oklchToRgb({ L, C, H }: { L: number; C: number; H: number }): { r: number; g: number; b: number } {
+  const a = Math.cos(H * Math.PI / 180) * C;
+  const b = Math.sin(H * Math.PI / 180) * C;
+  return oklabToRgb({ L, a, b });
+}
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+export function toHslString(h: number, s: number, l: number, alpha?: number): string {
+  if (alpha !== undefined) return `hsla(${h}, ${s}%, ${l}%, ${+alpha.toFixed(3)})`;
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+export function colorDeltaE(c1: string, c2: string): number {
+  const n1 = normalizeColor(c1);
+  const n2 = normalizeColor(c2);
+  const lab1 = rgbToLab({ r: n1.r ?? 0, g: n1.g ?? 0, b: n1.b ?? 0 });
+  const lab2 = rgbToLab({ r: n2.r ?? 0, g: n2.g ?? 0, b: n2.b ?? 0 });
+  // CIEDE2000
+  const deg = (rad: number) => rad * (180 / Math.PI);
+  const rad = (d: number) => d * (Math.PI / 180);
+  const { L: L1, a: a1, b: b1 } = lab1;
+  const { L: L2, a: a2, b: b2 } = lab2;
+  const dL = L2 - L1;
+  const Lm = (L1 + L2) / 2;
+  const C1 = Math.sqrt(a1 * a1 + b1 * b1);
+  const C2 = Math.sqrt(a2 * a2 + b2 * b2);
+  const Cm = (C1 + C2) / 2;
+  const Cm7 = Math.pow(Cm, 7);
+  const G = 0.5 * (1 - Math.sqrt(Cm7 / (Cm7 + Math.pow(25, 7))));
+  const a1p = a1 * (1 + G), a2p = a2 * (1 + G);
+  const C1p = Math.sqrt(a1p * a1p + b1 * b1);
+  const C2p = Math.sqrt(a2p * a2p + b2 * b2);
+  const dCp = C2p - C1p;
+  const Cmp = (C1p + C2p) / 2;
+  let h1p = deg(Math.atan2(b1, a1p)); if (h1p < 0) h1p += 360;
+  let h2p = deg(Math.atan2(b2, a2p)); if (h2p < 0) h2p += 360;
+  let dhp: number;
+  if (Math.abs(h1p - h2p) <= 180) dhp = h2p - h1p;
+  else if (h2p <= h1p) dhp = h2p - h1p + 360;
+  else dhp = h2p - h1p - 360;
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(rad(dhp / 2));
+  let Hmp: number;
+  if (Math.abs(h1p - h2p) <= 180) Hmp = (h1p + h2p) / 2;
+  else if (h1p + h2p < 360) Hmp = (h1p + h2p + 360) / 2;
+  else Hmp = (h1p + h2p - 360) / 2;
+  const T = 1
+    - 0.17 * Math.cos(rad(Hmp - 30))
+    + 0.24 * Math.cos(rad(2 * Hmp))
+    + 0.32 * Math.cos(rad(3 * Hmp + 6))
+    - 0.20 * Math.cos(rad(4 * Hmp - 63));
+  const SL = 1 + 0.015 * Math.pow(Lm - 50, 2) / Math.sqrt(20 + Math.pow(Lm - 50, 2));
+  const SC = 1 + 0.045 * Cmp;
+  const SH = 1 + 0.015 * Cmp * T;
+  const Cmp7 = Math.pow(Cmp, 7);
+  const RC = 2 * Math.sqrt(Cmp7 / (Cmp7 + Math.pow(25, 7)));
+  const dTheta = 30 * Math.exp(-Math.pow((Hmp - 275) / 25, 2));
+  const RT = -Math.sin(rad(2 * dTheta)) * RC;
+  return +Math.sqrt(
+    Math.pow(dL / SL, 2) +
+    Math.pow(dCp / SC, 2) +
+    Math.pow(dHp / SH, 2) +
+    RT * (dCp / SC) * (dHp / SH)
+  ).toFixed(4);
+}
+
+export function randomColor(options?: {
+  hRange?: [number, number];
+  sRange?: [number, number];
+  lRange?: [number, number];
+}): string {
+  const [hMin, hMax] = options?.hRange ?? [0, 360];
+  const [sMin, sMax] = options?.sRange ?? [40, 90];
+  const [lMin, lMax] = options?.lRange ?? [30, 70];
+  const h = Math.floor(Math.random() * (hMax - hMin)) + hMin;
+  const s = Math.floor(Math.random() * (sMax - sMin)) + sMin;
+  const l = Math.floor(Math.random() * (lMax - lMin)) + lMin;
+  return hslToHex(h, s, l);
+}
+
+export function toNearestNamedColor(color: string): string {
+  const n = normalizeColor(color);
+  const r = n.r ?? 0, g = n.g ?? 0, b = n.b ?? 0;
+  let bestName = 'black';
+  let bestDist = Infinity;
+  for (const [name, hex] of Object.entries(NAMED_COLORS)) {
+    const [nr, ng, nb] = hexToRgb(hex);
+    const dist = Math.sqrt(Math.pow(r - nr, 2) + Math.pow(g - ng, 2) + Math.pow(b - nb, 2));
+    if (dist < bestDist) { bestDist = dist; bestName = name; }
+  }
+  return bestName;
 }
