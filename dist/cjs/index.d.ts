@@ -1,10 +1,54 @@
-export type ColorType = 'hex' | 'css-var' | 'rgb' | 'hsl' | 'named' | 'unknown';
+export type ColorType = 'hex' | 'css-var' | 'rgb' | 'hsl' | 'named' | 'oklch' | 'color' | 'unknown';
 export declare function isCssVariable(value: string): boolean;
 export declare function isHexColor(value: string): boolean;
+export declare function isOklchColor(value: string): boolean;
+export declare function isColorFunction(value: string): boolean;
 export declare function isRgbColor(value: string): boolean;
 export declare function isHslColor(value: string): boolean;
 export declare function getColorType(value: string): ColorType;
 export declare function extractCssVariableName(value: string): string;
+export declare function parseCssVar(value: string): {
+    variableName: string;
+    fallback?: string;
+} | null;
+export declare function parseOklchString(str: string): {
+    L: number;
+    C: number;
+    H: number;
+    alpha: number;
+} | null;
+export declare function parseColorFn(str: string): {
+    space: string;
+    r: number;
+    g: number;
+    b: number;
+    alpha: number;
+} | null;
+export declare function rgbToDisplayP3(rgb: {
+    r: number;
+    g: number;
+    b: number;
+}): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function displayP3ToRgb(p3: {
+    r: number;
+    g: number;
+    b: number;
+}): {
+    r: number;
+    g: number;
+    b: number;
+};
+export declare function toDisplayP3Hex(color: string): string;
+export declare function shortHexToRgba(hex: string): {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+} | null;
 export declare function normalizeHex(hex: string): string;
 export declare function hexToRgb(hex: string): [number, number, number];
 export declare function hexToRgba(hex: string, opacity?: number): string;
@@ -153,8 +197,9 @@ export declare function tetradic(color: string): [string, string, string, string
 export declare function colorShades(color: string, steps?: number): string[];
 export declare function monochromatic(color: string, steps?: number): string[];
 export declare function mixColors(c1: string, c2: string, t: number, opts?: {
-    mode?: 'rgb' | 'hsl';
+    mode?: 'rgb' | 'hsl' | 'lab' | 'lch' | 'oklab' | 'oklch';
     format?: 'hex' | 'rgb' | 'rgba' | 'hsl';
+    hueInterpolation?: 'shorter' | 'longer' | 'increasing' | 'decreasing';
 }): string;
 export declare function relativeLuminance(color: string): number;
 export declare function contrastRatio(a: string, b: string): number;
@@ -281,3 +326,72 @@ export declare function randomColor(options?: {
     lRange?: [number, number];
 }): string;
 export declare function toNearestNamedColor(color: string): string;
+export declare function toOklchString(color: string, alpha?: number): string;
+export declare function toColorP3String(color: string, alpha?: number): string;
+export declare function interpolateColors(color1: string, color2: string, steps: number, options?: {
+    space?: 'rgb' | 'hsl' | 'lab' | 'lch' | 'oklab' | 'oklch';
+    format?: 'hex' | 'rgb' | 'rgba' | 'hsl';
+    hueInterpolation?: 'shorter' | 'longer' | 'increasing' | 'decreasing';
+}): string[];
+export declare function createColorScale(anchors: string[] | Array<{
+    color: string;
+    position?: number;
+}>, steps: number, options?: {
+    space?: 'rgb' | 'hsl' | 'oklab' | 'oklch';
+    format?: 'hex' | 'rgb' | 'hsl';
+}): string[];
+export declare function midpointColor(color1: string, color2: string, options?: {
+    space?: 'lab' | 'lch' | 'oklab' | 'oklch';
+}): string;
+export declare function tints(color: string, steps?: number): string[];
+export declare function shades(color: string, steps?: number): string[];
+export declare function tones(color: string, steps?: number, gray?: string): string[];
+export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia';
+export declare function simulateProtanopia(color: string): string;
+export declare function simulateDeuteranopia(color: string): string;
+export declare function simulateTritanopia(color: string): string;
+export declare function simulateColorBlindness(color: string, type: ColorBlindnessType): string;
+export type BackgroundSpec = string | {
+    type: 'semi-transparent';
+    color: string;
+    underlay?: string;
+} | {
+    type: 'gradient';
+    stops: string[];
+};
+export declare function isReadableOnBackground(textColor: string, background: BackgroundSpec, options?: {
+    level?: 'AA' | 'AAA';
+    largeText?: boolean;
+}): {
+    readable: boolean;
+    minContrastRatio: number;
+    wcagLevel: WcagLevel;
+};
+export interface PaletteScore {
+    palette: string[];
+    minContrastRatio: number;
+    avgContrastRatio: number;
+}
+export declare function bestContrastPalette(background: string, palettes: string[][], options?: {
+    weights?: number[];
+}): PaletteScore & {
+    paletteIndex: number;
+};
+export declare function clearColorCache(): void;
+export declare function getCacheStats(): {
+    size: number;
+    hits: number;
+};
+export declare function enableCache(): void;
+export declare function disableCache(): void;
+export declare function normalizeColorCached(input: string): ReturnType<typeof normalizeColor>;
+export declare function generateGradientColors(start: string, end: string, steps: number, options?: {
+    mode?: 'rgb' | 'hsl' | 'oklab' | 'oklch';
+    format?: 'hex' | 'rgb' | 'hsl';
+}): Generator<string>;
+export declare function generateTints(color: string, steps: number, options?: {
+    format?: 'hex' | 'rgb' | 'hsl';
+}): Generator<string>;
+export declare function generateShades(color: string, steps: number, options?: {
+    format?: 'hex' | 'rgb' | 'hsl';
+}): Generator<string>;

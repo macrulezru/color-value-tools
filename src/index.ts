@@ -1,4 +1,4 @@
-export type ColorType = 'hex' | 'css-var' | 'rgb' | 'hsl' | 'named' | 'unknown';
+export type ColorType = 'hex' | 'css-var' | 'rgb' | 'hsl' | 'named' | 'oklch' | 'color' | 'unknown';
 
 const NAMED_COLORS: Record<string, string> = {
   aliceblue:'#f0f8ff',antiquewhite:'#faebd7',aqua:'#00ffff',aquamarine:'#7fffd4',azure:'#f0ffff',
@@ -42,7 +42,15 @@ export function isCssVariable(value: string): boolean {
 
 export function isHexColor(value: string): boolean {
   const trimmed = value.trim();
-  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(trimmed);
+  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6})$/.test(trimmed);
+}
+
+export function isOklchColor(value: string): boolean {
+  return /^\s*oklcha?\s*\(/i.test(value.trim());
+}
+
+export function isColorFunction(value: string): boolean {
+  return /^\s*color\s*\(\s*(display-p3|srgb|srgb-linear)\s/i.test(value.trim());
 }
 
 export function isRgbColor(value: string): boolean {
@@ -56,18 +64,123 @@ export function isHslColor(value: string): boolean {
 }
 
 export function getColorType(value: string): ColorType {
-  const trimmed = value.trim().toLowerCase();
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
   if (isCssVariable(trimmed)) return 'css-var';
   if (isHexColor(trimmed)) return 'hex';
   if (isRgbColor(trimmed)) return 'rgb';
   if (isHslColor(trimmed)) return 'hsl';
-  if (trimmed in NAMED_COLORS) return 'named';
+  if (isOklchColor(trimmed)) return 'oklch';
+  if (isColorFunction(trimmed)) return 'color';
+  if (lower in NAMED_COLORS) return 'named';
   return 'unknown';
 }
 
 export function extractCssVariableName(value: string): string {
-  const match = value.match(/var\((--[^)]+)\)/);
-  return match?.[1] || value;
+  const match = value.match(/var\(\s*(--[^,)]+)/);
+  return match?.[1]?.trim() || value;
+}
+
+export function parseCssVar(value: string): { variableName: string; fallback?: string } | null {
+  const m = value.trim().match(/^var\(\s*(--[^,)]+)(?:,\s*([\s\S]+?))?\s*\)$/);
+  if (!m) return null;
+  return { variableName: m[1].trim(), fallback: m[2]?.trim() };
+}
+
+// ─── Section 1.1 — OKLCH / color() CSS string parsing ────────────────────────
+
+export function parseOklchString(str: string): { L: number; C: number; H: number; alpha: number } | null {
+  const m = str.trim().match(/oklcha?\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if (!m) return null;
+  let L = parseFloat(m[1]);
+  if (m[1].endsWith('%')) L = L / 100;
+  const C = parseFloat(m[2]);
+  const H = parseFloat(m[3]);
+  const alpha = m[4] !== undefined ? parseFloat(m[4]) : 1;
+  return { L, C, H, alpha };
+}
+
+export function parseColorFn(str: string): { space: string; r: number; g: number; b: number; alpha: number } | null {
+  const m = str.trim().match(/color\(\s*([\w-]+)\s+([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)(?:\s*\/\s*([\d.]+))?\s*\)/i);
+  if (!m) return null;
+  const space = m[1].toLowerCase();
+  const parseVal = (v: string) => v.endsWith('%') ? parseFloat(v) / 100 : parseFloat(v);
+  const r = parseVal(m[2]);
+  const g = parseVal(m[3]);
+  const b = parseVal(m[4]);
+  const alpha = m[5] !== undefined ? parseFloat(m[5]) : 1;
+  return { space, r, g, b, alpha };
+}
+
+// ─── Section 1.2 — Display P3 ────────────────────────────────────────────────
+
+export function rgbToDisplayP3(rgb: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
+  // Remove sRGB gamma (linearize)
+  const rl = srgbChanToLinear(rgb.r / 255);
+  const gl = srgbChanToLinear(rgb.g / 255);
+  const bl = srgbChanToLinear(rgb.b / 255);
+  // sRGB-linear → P3-linear matrix
+  const pr = 0.8226 * rl + 0.1774 * gl + 0.0000 * bl;
+  const pg = 0.0332 * rl + 0.9669 * gl + 0.0000 * bl;
+  const pb = 0.0171 * rl + 0.0724 * gl + 0.9103 * bl;
+  // Apply P3 gamma (same as sRGB)
+  return {
+    r: linearChanToSrgb(pr),
+    g: linearChanToSrgb(pg),
+    b: linearChanToSrgb(pb),
+  };
+}
+
+export function displayP3ToRgb(p3: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
+  // Remove P3 gamma
+  const rl = srgbChanToLinear(p3.r);
+  const gl = srgbChanToLinear(p3.g);
+  const bl = srgbChanToLinear(p3.b);
+  // P3-linear → sRGB-linear inverse matrix
+  const sr = 1.2247 * rl + (-0.2247) * gl + 0.0000 * bl;
+  const sg = (-0.0421) * rl + 1.0432 * gl + 0.0000 * bl;
+  const sb = (-0.0197) * rl + (-0.0786) * gl + 1.0983 * bl;
+  // Apply sRGB gamma
+  return {
+    r: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sr)))),
+    g: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sg)))),
+    b: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sb)))),
+  };
+}
+
+// Helpers for Display P3 (operate on 0-1 values)
+function srgbChanToLinear(v: number): number {
+  return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+}
+function linearChanToSrgb(v: number): number {
+  const t = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(1, t));
+}
+
+export function toDisplayP3Hex(color: string): string {
+  const n = normalizeColorRaw(color);
+  const p3 = rgbToDisplayP3({ r: n.r, g: n.g, b: n.b });
+  const back = displayP3ToRgb(p3);
+  return rgbToHex(back);
+}
+
+// Internal raw normalizer (no cache, no circular dep issues)
+function normalizeColorRaw(color: string): { r: number; g: number; b: number; a: number } {
+  const n = normalizeColor(color);
+  return { r: n.r ?? 0, g: n.g ?? 0, b: n.b ?? 0, a: n.a ?? 1 };
+}
+
+// ─── Section 1.3 — Short RGBA hex #RGBA ──────────────────────────────────────
+
+export function shortHexToRgba(hex: string): { r: number; g: number; b: number; a: number } | null {
+  let h = hex.trim();
+  if (!h.startsWith('#')) h = `#${h}`;
+  if (!/^#[0-9a-f]{4}$/i.test(h)) return null;
+  const r = parseInt(h[1] + h[1], 16);
+  const g = parseInt(h[2] + h[2], 16);
+  const b = parseInt(h[3] + h[3], 16);
+  const a = parseInt(h[4] + h[4], 16) / 255;
+  return { r, g, b, a };
 }
 
 export function normalizeHex(hex: string): string {
@@ -429,6 +542,52 @@ export function normalizeColor(input: string | { r: number; g: number; b: number
 
   if (str === 'transparent') return { type: 'named', hex: '#000000', r: 0, g: 0, b: 0, a: 0 };
 
+  // 4-digit #RGBA hex
+  if (/^#[0-9a-f]{4}$/i.test(str)) {
+    const rgba = shortHexToRgba(str);
+    if (rgba) {
+      const { r, g, b, a } = rgba;
+      const hex = rgbToHex({ r, g, b });
+      const [h, s, l] = rgbToHsl({ r, g, b });
+      const [, , vv] = rgbToHsv({ r, g, b });
+      return { type: 'hex', hex, r, g, b, a, h, s, l, v: vv };
+    }
+  }
+
+  // oklch / oklcha
+  if (isOklchColor(str)) {
+    const parsed = parseOklchString(str);
+    if (parsed) {
+      const { r, g, b } = oklchToRgb({ L: parsed.L, C: parsed.C, H: parsed.H });
+      const hex = rgbToHex({ r, g, b });
+      const [h, s, l] = rgbToHsl({ r, g, b });
+      const [, , vv] = rgbToHsv({ r, g, b });
+      return { type: 'oklch', hex, r, g, b, a: parsed.alpha, h, s, l, v: vv };
+    }
+  }
+
+  // color(display-p3 ...) / color(srgb ...)
+  if (isColorFunction(str)) {
+    const parsed = parseColorFn(str);
+    if (parsed) {
+      const { r: p3r, g: p3g, b: p3b, alpha } = parsed;
+      // Convert from p3/srgb (0-1) to sRGB 0-255
+      let r: number, g: number, b: number;
+      if (parsed.space === 'display-p3') {
+        const srgb = displayP3ToRgb({ r: p3r, g: p3g, b: p3b });
+        r = srgb.r; g = srgb.g; b = srgb.b;
+      } else {
+        r = Math.round(Math.max(0, Math.min(255, p3r * 255)));
+        g = Math.round(Math.max(0, Math.min(255, p3g * 255)));
+        b = Math.round(Math.max(0, Math.min(255, p3b * 255)));
+      }
+      const hex = rgbToHex({ r, g, b });
+      const [h, s, l] = rgbToHsl({ r, g, b });
+      const [, , vv] = rgbToHsv({ r, g, b });
+      return { type: 'color', hex, r, g, b, a: alpha, h, s, l, v: vv };
+    }
+  }
+
   return { type: 'unknown' };
 }
 
@@ -480,38 +639,79 @@ export function monochromatic(color: string, steps: number = 5): string[] {
   return result;
 }
 
-export function mixColors(c1: string, c2: string, t: number, opts?: { mode?: 'rgb' | 'hsl'; format?: 'hex' | 'rgb' | 'rgba' | 'hsl' }): string {
+function _lerpHue(h1: number, h2: number, t: number, mode: 'shorter' | 'longer' | 'increasing' | 'decreasing' = 'shorter'): number {
+  let d = h2 - h1;
+  if (mode === 'shorter') { if (d > 180) d -= 360; else if (d < -180) d += 360; }
+  else if (mode === 'longer') { if (d > 0 && d < 180) d -= 360; else if (d < 0 && d > -180) d += 360; }
+  else if (mode === 'increasing') { if (d < 0) d += 360; }
+  else if (mode === 'decreasing') { if (d > 0) d -= 360; }
+  return h1 + d * t;
+}
+
+function _formatMixResult(r: number, g: number, b: number, a: number, out: string): string {
+  if (out === 'hex') return rgbToHex({ r: Math.round(r), g: Math.round(g), b: Math.round(b) });
+  if (out === 'rgba') return rgbToRgbaString({ r: Math.round(r), g: Math.round(g), b: Math.round(b) }, a);
+  if (out === 'rgb') return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  if (out === 'hsl') { const [hh, ss, ll] = rgbToHsl({ r: Math.round(r), g: Math.round(g), b: Math.round(b) }); return `hsl(${hh}, ${ss}%, ${ll}%)`; }
+  return rgbToHex({ r: Math.round(r), g: Math.round(g), b: Math.round(b) });
+}
+
+export function mixColors(
+  c1: string, c2: string, t: number,
+  opts?: {
+    mode?: 'rgb' | 'hsl' | 'lab' | 'lch' | 'oklab' | 'oklch';
+    format?: 'hex' | 'rgb' | 'rgba' | 'hsl';
+    hueInterpolation?: 'shorter' | 'longer' | 'increasing' | 'decreasing';
+  }
+): string {
   const o1 = normalizeColor(c1);
   const o2 = normalizeColor(c2);
   t = Math.max(0, Math.min(1, t));
   const mode = opts?.mode || 'rgb';
   const out = opts?.format || 'hex';
+  const hueMode = opts?.hueInterpolation ?? 'shorter';
   let r = 0, g = 0, b = 0, a = 1;
+
   if (mode === 'hsl') {
     const h1 = o1.h ?? rgbToHsl({ r: o1.r ?? 0, g: o1.g ?? 0, b: o1.b ?? 0 })[0];
     const s1 = o1.s ?? 0; const l1 = o1.l ?? 0;
     const h2 = o2.h ?? rgbToHsl({ r: o2.r ?? 0, g: o2.g ?? 0, b: o2.b ?? 0 })[0];
     const s2 = o2.s ?? 0; const l2 = o2.l ?? 0;
-    const ih = h1 + ( ((h2 - h1 + 540) % 360) - 180 ) * t;
-    const is = s1 + (s2 - s1) * t;
-    const il = l1 + (l2 - l1) * t;
-    const rgb = hslToRgb(ih, is, il);
+    const ih = _lerpHue(h1, h2, t, hueMode);
+    const rgb = hslToRgb(ih, s1 + (s2 - s1) * t, l1 + (l2 - l1) * t);
     r = rgb.r; g = rgb.g; b = rgb.b;
     a = (o1.a ?? 1) + ((o2.a ?? 1) - (o1.a ?? 1)) * t;
+  } else if (mode === 'lab') {
+    const lab1 = rgbToLab({ r: o1.r ?? 0, g: o1.g ?? 0, b: o1.b ?? 0 });
+    const lab2 = rgbToLab({ r: o2.r ?? 0, g: o2.g ?? 0, b: o2.b ?? 0 });
+    const mixed = labToRgb({ L: lab1.L + (lab2.L - lab1.L) * t, a: lab1.a + (lab2.a - lab1.a) * t, b: lab1.b + (lab2.b - lab1.b) * t });
+    r = mixed.r; g = mixed.g; b = mixed.b;
+    a = (o1.a ?? 1) + ((o2.a ?? 1) - (o1.a ?? 1)) * t;
+  } else if (mode === 'lch') {
+    const lch1 = rgbToLch({ r: o1.r ?? 0, g: o1.g ?? 0, b: o1.b ?? 0 });
+    const lch2 = rgbToLch({ r: o2.r ?? 0, g: o2.g ?? 0, b: o2.b ?? 0 });
+    const mixed = lchToRgb({ L: lch1.L + (lch2.L - lch1.L) * t, C: lch1.C + (lch2.C - lch1.C) * t, H: _lerpHue(lch1.H, lch2.H, t, hueMode) });
+    r = mixed.r; g = mixed.g; b = mixed.b;
+    a = (o1.a ?? 1) + ((o2.a ?? 1) - (o1.a ?? 1)) * t;
+  } else if (mode === 'oklab') {
+    const ok1 = rgbToOklab({ r: o1.r ?? 0, g: o1.g ?? 0, b: o1.b ?? 0 });
+    const ok2 = rgbToOklab({ r: o2.r ?? 0, g: o2.g ?? 0, b: o2.b ?? 0 });
+    const mixed = oklabToRgb({ L: ok1.L + (ok2.L - ok1.L) * t, a: ok1.a + (ok2.a - ok1.a) * t, b: ok1.b + (ok2.b - ok1.b) * t });
+    r = mixed.r; g = mixed.g; b = mixed.b;
+    a = (o1.a ?? 1) + ((o2.a ?? 1) - (o1.a ?? 1)) * t;
+  } else if (mode === 'oklch') {
+    const ok1 = rgbToOklch({ r: o1.r ?? 0, g: o1.g ?? 0, b: o1.b ?? 0 });
+    const ok2 = rgbToOklch({ r: o2.r ?? 0, g: o2.g ?? 0, b: o2.b ?? 0 });
+    const mixed = oklchToRgb({ L: ok1.L + (ok2.L - ok1.L) * t, C: ok1.C + (ok2.C - ok1.C) * t, H: _lerpHue(ok1.H, ok2.H, t, hueMode) });
+    r = mixed.r; g = mixed.g; b = mixed.b;
+    a = (o1.a ?? 1) + ((o2.a ?? 1) - (o1.a ?? 1)) * t;
   } else {
-    r = ( (o1.r ?? 0) * (1 - t) ) + ( (o2.r ?? 0) * t );
-    g = ( (o1.g ?? 0) * (1 - t) ) + ( (o2.g ?? 0) * t );
-    b = ( (o1.b ?? 0) * (1 - t) ) + ( (o2.b ?? 0) * t );
+    r = (o1.r ?? 0) * (1 - t) + (o2.r ?? 0) * t;
+    g = (o1.g ?? 0) * (1 - t) + (o2.g ?? 0) * t;
+    b = (o1.b ?? 0) * (1 - t) + (o2.b ?? 0) * t;
     a = (o1.a ?? 1) * (1 - t) + (o2.a ?? 1) * t;
   }
-  if (out === 'hex') return rgbToHex({ r: Math.round(r), g: Math.round(g), b: Math.round(b) });
-  if (out === 'rgba') return rgbToRgbaString({ r: Math.round(r), g: Math.round(g), b: Math.round(b) }, a);
-  if (out === 'rgb') return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  if (out === 'hsl') {
-    const [hh, ss, ll] = rgbToHsl({ r: Math.round(r), g: Math.round(g), b: Math.round(b) });
-    return `hsl(${hh}, ${ss}%, ${ll}%)`;
-  }
-  return rgbToHex({ r: Math.round(r), g: Math.round(g), b: Math.round(b) });
+  return _formatMixResult(r, g, b, a, out);
 }
 
 export function relativeLuminance(color: string): number {
@@ -838,4 +1038,244 @@ export function toNearestNamedColor(color: string): string {
     if (dist < bestDist) { bestDist = dist; bestName = name; }
   }
   return bestName;
+}
+
+// ─── Formatting ───────────────────────────────────────────────────────────────
+
+export function toOklchString(color: string, alpha?: number): string {
+  const n = normalizeColor(color);
+  const { L, C, H } = rgbToOklch({ r: n.r ?? 0, g: n.g ?? 0, b: n.b ?? 0 });
+  const Lr = +L.toFixed(4), Cr = +C.toFixed(4), Hr = +H.toFixed(2);
+  if (alpha !== undefined) return `oklch(${Lr} ${Cr} ${Hr} / ${+alpha.toFixed(3)})`;
+  return `oklch(${Lr} ${Cr} ${Hr})`;
+}
+
+export function toColorP3String(color: string, alpha?: number): string {
+  const n = normalizeColor(color);
+  const p3 = rgbToDisplayP3({ r: n.r ?? 0, g: n.g ?? 0, b: n.b ?? 0 });
+  const r = +p3.r.toFixed(4), g = +p3.g.toFixed(4), b = +p3.b.toFixed(4);
+  if (alpha !== undefined) return `color(display-p3 ${r} ${g} ${b} / ${+alpha.toFixed(3)})`;
+  return `color(display-p3 ${r} ${g} ${b})`;
+}
+
+// ─── Section 2: Interpolation ─────────────────────────────────────────────────
+
+export function interpolateColors(
+  color1: string,
+  color2: string,
+  steps: number,
+  options?: {
+    space?: 'rgb' | 'hsl' | 'lab' | 'lch' | 'oklab' | 'oklch';
+    format?: 'hex' | 'rgb' | 'rgba' | 'hsl';
+    hueInterpolation?: 'shorter' | 'longer' | 'increasing' | 'decreasing';
+  }
+): string[] {
+  if (steps < 2) return steps === 1 ? [mixColors(color1, color2, 0.5, options)] : [];
+  const result: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    result.push(mixColors(color1, color2, i / (steps - 1), options));
+  }
+  return result;
+}
+
+export function createColorScale(
+  anchors: string[] | Array<{ color: string; position?: number }>,
+  steps: number,
+  options?: { space?: 'rgb' | 'hsl' | 'oklab' | 'oklch'; format?: 'hex' | 'rgb' | 'hsl' }
+): string[] {
+  const normalized = (anchors as any[]).map((a, i, arr) => ({
+    color: typeof a === 'string' ? a : a.color,
+    position: typeof a === 'string' ? i / Math.max(arr.length - 1, 1) : (a.position ?? i / Math.max(arr.length - 1, 1)),
+  }));
+  normalized.sort((a, b) => a.position - b.position);
+  const result: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = steps === 1 ? 0 : i / (steps - 1);
+    let lo = normalized[0], hi = normalized[normalized.length - 1];
+    for (let j = 0; j < normalized.length - 1; j++) {
+      if (t >= normalized[j].position && t <= normalized[j + 1].position) { lo = normalized[j]; hi = normalized[j + 1]; break; }
+    }
+    const span = hi.position - lo.position;
+    const localT = span === 0 ? 0 : (t - lo.position) / span;
+    result.push(mixColors(lo.color, hi.color, localT, options));
+  }
+  return result;
+}
+
+export function midpointColor(
+  color1: string,
+  color2: string,
+  options?: { space?: 'lab' | 'lch' | 'oklab' | 'oklch' }
+): string {
+  return mixColors(color1, color2, 0.5, { mode: options?.space ?? 'oklab' });
+}
+
+// ─── Section 3: Tints / Shades / Tones ───────────────────────────────────────
+
+export function tints(color: string, steps: number = 5): string[] {
+  return interpolateColors(color, '#ffffff', steps, { space: 'oklab' });
+}
+
+export function shades(color: string, steps: number = 5): string[] {
+  return interpolateColors(color, '#000000', steps, { space: 'oklab' });
+}
+
+export function tones(color: string, steps: number = 5, gray: string = '#808080'): string[] {
+  return interpolateColors(color, gray, steps, { space: 'oklab' });
+}
+
+// ─── Section 4: Color blindness simulation ────────────────────────────────────
+
+function _simulateCB(color: string, matrix: number[][]): string {
+  const n = normalizeColor(color);
+  // linearize
+  const lin = (v: number) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const enc = (v: number) => { const c = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; return Math.round(Math.max(0, Math.min(1, c)) * 255); };
+  const r = lin(n.r ?? 0), g = lin(n.g ?? 0), b = lin(n.b ?? 0);
+  const nr = enc(matrix[0][0] * r + matrix[0][1] * g + matrix[0][2] * b);
+  const ng = enc(matrix[1][0] * r + matrix[1][1] * g + matrix[1][2] * b);
+  const nb = enc(matrix[2][0] * r + matrix[2][1] * g + matrix[2][2] * b);
+  return rgbToHex({ r: nr, g: ng, b: nb });
+}
+
+const _PROTANOPIA_M   = [[0.56667, 0.43333, 0.00000], [0.55833, 0.44167, 0.00000], [0.00000, 0.24167, 0.75833]];
+const _DEUTERANOPIA_M = [[0.62500, 0.37500, 0.00000], [0.70000, 0.30000, 0.00000], [0.00000, 0.30000, 0.70000]];
+const _TRITANOPIA_M   = [[0.95000, 0.05000, 0.00000], [0.00000, 0.43333, 0.56667], [0.00000, 0.47500, 0.52500]];
+
+export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia';
+
+export function simulateProtanopia(color: string): string   { return _simulateCB(color, _PROTANOPIA_M); }
+export function simulateDeuteranopia(color: string): string { return _simulateCB(color, _DEUTERANOPIA_M); }
+export function simulateTritanopia(color: string): string   { return _simulateCB(color, _TRITANOPIA_M); }
+export function simulateColorBlindness(color: string, type: ColorBlindnessType): string {
+  if (type === 'protanopia')   return simulateProtanopia(color);
+  if (type === 'deuteranopia') return simulateDeuteranopia(color);
+  return simulateTritanopia(color);
+}
+
+// ─── Section 4.2: isReadableOnBackground ─────────────────────────────────────
+
+export type BackgroundSpec =
+  | string
+  | { type: 'semi-transparent'; color: string; underlay?: string }
+  | { type: 'gradient'; stops: string[] };
+
+export function isReadableOnBackground(
+  textColor: string,
+  background: BackgroundSpec,
+  options?: { level?: 'AA' | 'AAA'; largeText?: boolean }
+): { readable: boolean; minContrastRatio: number; wcagLevel: WcagLevel } {
+  const level = options?.level ?? 'AA';
+  const large = options?.largeText ?? false;
+  const minRequired = level === 'AAA' ? (large ? 4.5 : 7) : (large ? 3 : 4.5);
+
+  let minRatio: number;
+  if (typeof background === 'string') {
+    minRatio = contrastRatio(textColor, background);
+  } else if (background.type === 'semi-transparent') {
+    const underlay = background.underlay ?? '#ffffff';
+    const fg = normalizeColor(background.color);
+    const bg = normalizeColor(underlay);
+    const alpha = fg.a ?? 1;
+    const cr = Math.round((fg.r ?? 0) * alpha + (bg.r ?? 255) * (1 - alpha));
+    const cg = Math.round((fg.g ?? 0) * alpha + (bg.g ?? 255) * (1 - alpha));
+    const cb = Math.round((fg.b ?? 0) * alpha + (bg.b ?? 255) * (1 - alpha));
+    minRatio = contrastRatio(textColor, rgbToHex({ r: cr, g: cg, b: cb }));
+  } else {
+    const ratios = background.stops.map(stop => contrastRatio(textColor, stop));
+    minRatio = Math.min(...ratios);
+  }
+
+  const wLevel = wcagLevel(textColor, typeof background === 'string' ? background : '#ffffff');
+  return { readable: minRatio >= minRequired, minContrastRatio: +minRatio.toFixed(2), wcagLevel: wLevel };
+}
+
+// ─── Section 4.3: bestContrastPalette ────────────────────────────────────────
+
+export interface PaletteScore {
+  palette: string[];
+  minContrastRatio: number;
+  avgContrastRatio: number;
+}
+
+export function bestContrastPalette(
+  background: string,
+  palettes: string[][],
+  options?: { weights?: number[] }
+): PaletteScore & { paletteIndex: number } {
+  let bestIdx = 0;
+  let bestScore = -1;
+  let bestMin = 0, bestAvg = 0;
+
+  palettes.forEach((palette, idx) => {
+    const ratios = palette.map(c => contrastRatio(background, c));
+    const weights = options?.weights ?? ratios.map(() => 1);
+    const totalW = weights.reduce((s, w) => s + w, 0);
+    const avg = ratios.reduce((s, r, i) => s + r * (weights[i] ?? 1), 0) / totalW;
+    const min = Math.min(...ratios);
+    // Score: weighted avg with heavy penalty on minimum
+    const score = avg * 0.4 + min * 0.6;
+    if (score > bestScore) { bestScore = score; bestIdx = idx; bestMin = min; bestAvg = avg; }
+  });
+
+  return {
+    paletteIndex: bestIdx,
+    palette: palettes[bestIdx],
+    minContrastRatio: +bestMin.toFixed(2),
+    avgContrastRatio: +bestAvg.toFixed(2),
+  };
+}
+
+// ─── Section 5.1: Caching ────────────────────────────────────────────────────
+
+let _cacheEnabled = true;
+const _normalizeCache = new Map<string, ReturnType<typeof normalizeColor>>();
+let _cacheHits = 0;
+
+export function clearColorCache(): void { _normalizeCache.clear(); _cacheHits = 0; }
+export function getCacheStats(): { size: number; hits: number } { return { size: _normalizeCache.size, hits: _cacheHits }; }
+export function enableCache(): void  { _cacheEnabled = true; }
+export function disableCache(): void { _cacheEnabled = false; }
+
+// Cached normalizer wrapper — use this in performance-sensitive contexts
+export function normalizeColorCached(input: string): ReturnType<typeof normalizeColor> {
+  if (!_cacheEnabled) return normalizeColor(input);
+  const cached = _normalizeCache.get(input);
+  if (cached) { _cacheHits++; return cached; }
+  const result = normalizeColor(input);
+  _normalizeCache.set(input, result);
+  return result;
+}
+
+// ─── Section 5.2: Generator functions ────────────────────────────────────────
+
+export function* generateGradientColors(
+  start: string,
+  end: string,
+  steps: number,
+  options?: { mode?: 'rgb' | 'hsl' | 'oklab' | 'oklch'; format?: 'hex' | 'rgb' | 'hsl' }
+): Generator<string> {
+  for (let i = 0; i < steps; i++) {
+    yield mixColors(start, end, steps === 1 ? 0 : i / (steps - 1), options);
+  }
+}
+
+export function* generateTints(
+  color: string,
+  steps: number,
+  options?: { format?: 'hex' | 'rgb' | 'hsl' }
+): Generator<string> {
+  for (let i = 0; i < steps; i++) {
+    yield mixColors(color, '#ffffff', steps === 1 ? 0 : i / (steps - 1), { mode: 'oklab', ...options });
+  }
+}
+
+export function* generateShades(
+  color: string,
+  steps: number,
+  options?: { format?: 'hex' | 'rgb' | 'hsl' }
+): Generator<string> {
+  for (let i = 0; i < steps; i++) {
+    yield mixColors(color, '#000000', steps === 1 ? 0 : i / (steps - 1), { mode: 'oklab', ...options });
+  }
 }

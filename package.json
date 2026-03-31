@@ -1,6 +1,6 @@
 {
   "name": "color-value-tools",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A comprehensive utility library for parsing, converting, manipulating, and analyzing color values across all major color models — hex, RGB, HSL, HSV, HWB, Lab, LCH, OKLAB, OKLCH, CMYK — plus CSS variables and named colors.",
   "repository": {
     "type": "git",
@@ -20,11 +20,14 @@
       "types": "./dist/cjs/index.d.ts"
     }
   },
+  "bin": {
+    "cvt": "./dist/cli/bin/cli.js"
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}))\"",
+    "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.cli.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}))\"",
     "test": "vitest run"
   },
   "keywords": [
@@ -47,6 +50,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }
