@@ -140,11 +140,11 @@ export function displayP3ToRgb(p3: { r: number; g: number; b: number }): { r: nu
   const sr = 1.2247 * rl + (-0.2247) * gl + 0.0000 * bl;
   const sg = (-0.0421) * rl + 1.0432 * gl + 0.0000 * bl;
   const sb = (-0.0197) * rl + (-0.0786) * gl + 1.0983 * bl;
-  // Apply sRGB gamma
+  // Apply sRGB gamma and scale to 0-255
   return {
-    r: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sr)))),
-    g: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sg)))),
-    b: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sb)))),
+    r: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sr) * 255))),
+    g: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sg) * 255))),
+    b: Math.round(Math.max(0, Math.min(255, linearChanToSrgb(sb) * 255))),
   };
 }
 
@@ -160,8 +160,11 @@ function linearChanToSrgb(v: number): number {
 export function toDisplayP3Hex(color: string): string {
   const n = normalizeColorRaw(color);
   const p3 = rgbToDisplayP3({ r: n.r, g: n.g, b: n.b });
-  const back = displayP3ToRgb(p3);
-  return rgbToHex(back);
+  return rgbToHex({
+    r: Math.round(Math.max(0, Math.min(255, p3.r * 255))),
+    g: Math.round(Math.max(0, Math.min(255, p3.g * 255))),
+    b: Math.round(Math.max(0, Math.min(255, p3.b * 255))),
+  });
 }
 
 // Internal raw normalizer (no cache, no circular dep issues)
@@ -493,18 +496,10 @@ export function normalizeColor(input: string | { r: number; g: number; b: number
 
   if (isCssVariable(str)) return { type: 'css-var', raw: str };
 
-  if (isHexColor(str)) {
-    const hex = normalizeHex(str);
-    const [r, g, b] = hexToRgb(hex);
-    const [h, s, l] = hexToHsl(hex);
-    const [hh, ss, vv] = rgbToHsv({ r, g, b });
-    return { type: 'hex', hex, r, g, b, a: 1, h, s, l, v: vv };
-  }
-
+  // 8-digit (#rrggbbaa) or 4-digit (#rgba) — check before isHexColor
   const hex8 = str.match(/^#([0-9a-f]{8}|[0-9a-f]{4})$/i);
   if (hex8) {
     const rgba = hex8ToRgba(str);
-
     if (rgba) {
       const { r, g, b, a } = rgba;
       const hex = rgbToHex({ r, g, b });
@@ -512,6 +507,14 @@ export function normalizeColor(input: string | { r: number; g: number; b: number
       const [hh, ss, vv] = rgbToHsv({ r, g, b });
       return { type: 'hex', hex, r, g, b, a, h, s, l, v: vv };
     }
+  }
+
+  if (isHexColor(str)) {
+    const hex = normalizeHex(str);
+    const [r, g, b] = hexToRgb(hex);
+    const [h, s, l] = hexToHsl(hex);
+    const [hh, ss, vv] = rgbToHsv({ r, g, b });
+    return { type: 'hex', hex, r, g, b, a: 1, h, s, l, v: vv };
   }
 
   if (isRgbColor(str)) {
@@ -541,18 +544,6 @@ export function normalizeColor(input: string | { r: number; g: number; b: number
   }
 
   if (str === 'transparent') return { type: 'named', hex: '#000000', r: 0, g: 0, b: 0, a: 0 };
-
-  // 4-digit #RGBA hex
-  if (/^#[0-9a-f]{4}$/i.test(str)) {
-    const rgba = shortHexToRgba(str);
-    if (rgba) {
-      const { r, g, b, a } = rgba;
-      const hex = rgbToHex({ r, g, b });
-      const [h, s, l] = rgbToHsl({ r, g, b });
-      const [, , vv] = rgbToHsv({ r, g, b });
-      return { type: 'hex', hex, r, g, b, a, h, s, l, v: vv };
-    }
-  }
 
   // oklch / oklcha
   if (isOklchColor(str)) {
