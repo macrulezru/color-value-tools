@@ -1,12 +1,14 @@
 {
   "name": "color-value-tools",
-  "version": "1.1.5",
-  "description": "A comprehensive utility library for parsing, converting, manipulating, and analyzing color values across all major color models — hex, RGB, HSL, HSV, HWB, Lab, LCH, OKLAB, OKLCH, CMYK — plus CSS variables and named colors.",
+  "version": "1.1.6",
+  "description": "Parse, convert and manipulate colors across hex, RGB, HSL, Lab, LCH, OKLCH and CMYK, with WCAG contrast checks and CSS variables. Zero dependencies.",
+  "author": "macrulez <macrulezru@gmail.com> (https://macrulez.ru/en)",
+  "license": "MIT",
+  "homepage": "https://github.com/macrulezru/color-value-tools#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/macrulezru/color-value-tools.git"
   },
-  "homepage": "https://macrulez.ru/#/en",
   "bugs": {
     "url": "https://github.com/macrulezru/color-value-tools/issues"
   },
@@ -15,18 +17,24 @@
   "types": "dist/cjs/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/cjs/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/cjs/index.d.ts"
+      "require": "./dist/cjs/index.js"
     }
   },
   "bin": {
     "cvt": "./dist/cli/bin/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.cli.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}))\"",
     "test": "vitest run"
   },
@@ -36,19 +44,13 @@
     "hex",
     "rgb",
     "hsl",
-    "hsv",
-    "hwb",
-    "oklab",
     "oklch",
     "cmyk",
-    "lab",
-    "lch",
+    "color-conversion",
     "wcag",
     "accessibility",
     "typescript"
   ],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "^5.0.0",
