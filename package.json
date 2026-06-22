@@ -1,6 +1,6 @@
 {
   "name": "color-value-tools",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Parse, convert and manipulate colors across hex, RGB, HSL, Lab, LCH, OKLCH and CMYK, with WCAG contrast checks and CSS variables. Zero dependencies.",
   "author": "macrulez <macrulezru@gmail.com> (https://macrulez.ru/en)",
   "license": "MIT",
