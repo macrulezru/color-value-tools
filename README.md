@@ -1,6 +1,6 @@
 # **Color Value Tools**
 
-![Мой логотип](https://github.com/macrulezru/assets/blob/master/packages-images/color-value-tools.png?raw=true)
+![Color Value Tools](https://github.com/macrulezru/assets/blob/master/packages-images/color-value-tools.png?raw=true)
 
 A comprehensive utility library for parsing, converting, manipulating, and analyzing color values across all major color models — hex, RGB, HSL, HSV, HWB, Lab, LCH, Oklab, Oklch, CMYK, Display P3 — plus CSS variables and named colors. Zero dependencies.
 
