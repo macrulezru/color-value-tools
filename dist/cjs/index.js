@@ -708,6 +708,14 @@ function normalizeColor(input) {
     }
     if (str === 'transparent')
         return { type: 'named', hex: '#000000', r: 0, g: 0, b: 0, a: 0 };
+    const lowerStr = str.toLowerCase();
+    if (lowerStr in NAMED_COLORS) {
+        const hex = NAMED_COLORS[lowerStr];
+        const [r, g, b] = hexToRgb(hex);
+        const [h, s, l] = hexToHsl(hex);
+        const [, , vv] = rgbToHsv({ r, g, b });
+        return { type: 'named', hex, r, g, b, a: 1, h, s, l, v: vv };
+    }
     // oklch / oklcha
     if (isOklchColor(str)) {
         const parsed = parseOklchString(str);

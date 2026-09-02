@@ -429,6 +429,26 @@ describe('normalizeColor', () => {
     expect(c.type).toBe('hex');
     expect(c.r).toBe(255); expect(c.g).toBe(0); expect(c.b).toBe(0);
   });
+  it('parses a named color', () => {
+    const c = normalizeColor('red');
+    expect(c.type).toBe('named');
+    expect(c.hex).toBe('#ff0000');
+    expect(c.r).toBe(255); expect(c.g).toBe(0); expect(c.b).toBe(0);
+  });
+  it('parses a multi-word named color case-insensitively', () => {
+    const c = normalizeColor('CornflowerBlue');
+    expect(c.type).toBe('named');
+    expect(c.hex).toBe('#6495ed');
+  });
+  it('still special-cases transparent', () => {
+    const c = normalizeColor('transparent');
+    expect(c.type).toBe('named');
+    expect(c.a).toBe(0);
+  });
+  it('falls back to unknown for an unrecognized string', () => {
+    const c = normalizeColor('not-a-color');
+    expect(c.type).toBe('unknown');
+  });
 });
 
 // ─── Section 1: New parsers ───────────────────────────────────────────────────
