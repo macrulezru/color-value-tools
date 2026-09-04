@@ -80,6 +80,37 @@ CommonJS:
 const { normalizeColor, mixColors } = require('color-value-tools')
 ```
 
+### More examples
+
+#### What your palette looks like to a colorblind user
+
+`simulateColorBlindness` applies the Vienot 1999 matrices to linearized RGB — you can check contrast before shipping, not guess from a checklist.
+
+```ts
+import { simulateColorBlindness } from 'color-value-tools'
+
+simulateColorBlindness('#e74c3c', 'deuteranopia') // '#9a7b00'
+simulateColorBlindness('#3498db', 'protanopia') // '#5282db'
+
+// Vienot 1999 matrices applied to linearized RGB — good enough to check a
+// palette before it ships, not just guess from a colorblind-safe checklist.
+```
+
+#### A harmony and a shade scale from one color
+
+`triadic` builds three colors 120° apart, `colorShades` a light-to-dark scale of nine steps. One base color in, a coordinated palette out — no manual hue math, no hand-picked hex values.
+
+```ts
+import { triadic, colorShades } from 'color-value-tools'
+
+triadic('#6c3483') // ['#6c3483', '#34836c', '#83346c'] — evenly spaced 120°
+
+const shades = colorShades('#6c3483', 9) // light-to-dark HSL scale, 9 steps
+
+// One base color in, a coordinated palette out — no manual hue-rotation
+// math, no hand-picked hex values.
+```
+
 ---
 
 ## Documentation & links
