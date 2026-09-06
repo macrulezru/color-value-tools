@@ -25,6 +25,17 @@ A comprehensive utility library for parsing, converting, manipulating, and analy
 
 ---
 
+## When you'd reach for this
+
+Color stops being a one-time accent pick in a design tool the moment your project needs to convert, compare, and validate it programmatically — that's exactly what Color Value Tools is for.
+
+- **A design system built on custom tokens** — Instead of hand-tuning every shade and tint in Figma, generate the whole scale from one base color with a single function — mathematically even, not "eyeballed."
+- **Your theme switches at runtime** — When the background changes dynamically (dark mode, per-client branding, a user-picked palette), you need to recompute a readable text color and check it against WCAG every time, not hardcode pairs upfront.
+- **Color arrives from different sources** — An API returns hex, a designer hands you HSL, a CSS variable holds a color in the oklch format — you need to normalize all of it to one format without writing a parser for every case.
+- **An accessibility audit of the UI** — You need to quickly show how the palette looks under protanopia or deuteranopia, without installing a separate browser extension.
+
+---
+
 ## Installation
 
 Requires Node.js `18+`. No runtime or peer dependencies — the package is fully framework-agnostic and works in any JS/TS environment (browser, Node, edge runtimes).
