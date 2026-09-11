@@ -130,15 +130,24 @@ const NAMED_COLORS = {
     springgreen: '#00ff7f', steelblue: '#4682b4', tan: '#d2b48c', teal: '#008080', thistle: '#d8bfd8',
     tomato: '#ff6347', turquoise: '#40e0d0', violet: '#ee82ee', wheat: '#f5deb3', white: '#ffffff',
     whitesmoke: '#f5f5f5', yellow: '#ffff00', yellowgreen: '#9acd32',
-    // Special CSS keywords
-    transparent: 'transparent', currentcolor: 'currentcolor', inherit: 'inherit', initial: 'initial', unset: 'unset',
+    // 'transparent' is the only CSS-wide keyword with an actual fixed color (fully
+    // transparent black) — normalizeColor() special-cases it before ever reaching
+    // this table (see the `str === 'transparent'` check), so this entry only
+    // matters for getColorType()/toNearestNamedColor(), which read the table
+    // directly. 'currentcolor'/'inherit'/'initial'/'unset' are deliberately NOT
+    // listed here: none of them has a color value of their own (they only resolve
+    // to one given surrounding DOM/CSSOM context this library never has access
+    // to), so treating them as resolvable named colors would mean fabricating an
+    // arbitrary RGB value with no way for a caller to tell it apart from a real
+    // one — see normalizeColor()'s `type: 'unknown'` fallback for these instead.
+    transparent: 'transparent',
 };
 function isCssVariable(value) {
     return value.trim().startsWith('var(--');
 }
 function isHexColor(value) {
     const trimmed = value.trim();
-    return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6})$/.test(trimmed);
+    return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(trimmed);
 }
 function isOklchColor(value) {
     return /^\s*oklcha?\s*\(/i.test(value.trim());
@@ -479,11 +488,18 @@ function rgbaStringToRgba(str) {
     const parts = m[1].split(/,\s*/).map(p => p.trim());
     if (parts.length < 3)
         return null;
-    const parseChannel = (v) => v.endsWith('%') ? Math.round(parseFloat(v) * 2.55) : Math.round(parseFloat(v));
+    // Clamp channels to a valid byte and alpha to [0,1] — an out-of-range input
+    // like "rgb(300, -20, 0)" or "rgba(0,0,0,2)" is invalid CSS, but previously
+    // passed straight through unclamped, which could even corrupt downstream hex
+    // output (a negative channel stringifies with a leading "-" via toString(16)).
+    const parseChannel = (v) => {
+        const n = v.endsWith('%') ? parseFloat(v) * 2.55 : parseFloat(v);
+        return Math.round(Math.max(0, Math.min(255, n)));
+    };
     const r = parseChannel(parts[0]);
     const g = parseChannel(parts[1]);
     const b = parseChannel(parts[2]);
-    const a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
+    const a = parts[3] !== undefined ? Math.max(0, Math.min(1, parseFloat(parts[3]))) : 1;
     return { r, g, b, a };
 }
 function rgbToHsl({ r, g, b }) {
@@ -740,6 +756,16 @@ function normalizeColor(input) {
                 g = srgb.g;
                 b = srgb.b;
             }
+            else if (parsed.space === 'srgb-linear') {
+                // srgb-linear components are linear-light, not gamma-encoded — unlike
+                // plain srgb below, they need the linear-to-sRGB transfer function
+                // applied before scaling to a 0-255 byte. Without this, only the 0/1
+                // extremes happened to come out correct; any mid-range value (e.g. 0.5)
+                // converted as if it were already gamma-encoded, which is wrong.
+                r = Math.round(linearChanToSrgb(p3r) * 255);
+                g = Math.round(linearChanToSrgb(p3g) * 255);
+                b = Math.round(linearChanToSrgb(p3b) * 255);
+            }
             else {
                 r = Math.round(Math.max(0, Math.min(255, p3r * 255)));
                 g = Math.round(Math.max(0, Math.min(255, p3g * 255)));
@@ -778,10 +804,16 @@ function tetradic(color) {
     return [hex, rotateHue(hex, 90), rotateHue(hex, 180), rotateHue(hex, 270)];
 }
 function colorShades(color, steps = 9) {
-    var _a, _b;
+    var _a, _b, _c;
     const n = normalizeColor(color);
     const h = (_a = n.h) !== null && _a !== void 0 ? _a : 0;
     const s = (_b = n.s) !== null && _b !== void 0 ? _b : 0;
+    // steps - 1 === 0 below would otherwise divide by zero (NaN lightness, then
+    // a literal "#NaNNaNNaN" hex string) — a single shade is just the color's
+    // own lightness, same idea as interpolateColors() returning the midpoint
+    // for a 2-color, 1-step request.
+    if (steps <= 1)
+        return steps === 1 ? [hslToHex(h, s, (_c = n.l) !== null && _c !== void 0 ? _c : 50)] : [];
     const result = [];
     for (let i = 0; i < steps; i++) {
         const l = Math.round(100 - (i / (steps - 1)) * 100);
@@ -790,10 +822,13 @@ function colorShades(color, steps = 9) {
     return result;
 }
 function monochromatic(color, steps = 5) {
-    var _a, _b;
+    var _a, _b, _c;
     const n = normalizeColor(color);
     const h = (_a = n.h) !== null && _a !== void 0 ? _a : 0;
     const l = (_b = n.l) !== null && _b !== void 0 ? _b : 50;
+    // Same steps === 1 divide-by-zero guard as colorShades() above.
+    if (steps <= 1)
+        return steps === 1 ? [hslToHex(h, (_c = n.s) !== null && _c !== void 0 ? _c : 0, l)] : [];
     const result = [];
     for (let i = 0; i < steps; i++) {
         const s = Math.round((i / (steps - 1)) * 100);
@@ -1215,6 +1250,12 @@ function toNearestNamedColor(color) {
     let bestName = 'black';
     let bestDist = Infinity;
     for (const [name, hex] of Object.entries(NAMED_COLORS)) {
+        // Skip any non-hex entry (currently just a defensive guard — 'transparent'
+        // is the only such value left in the table, and it has no real RGB to
+        // compare against; hexToRgb() would otherwise silently fall back to
+        // normalizeHex()'s placeholder color for it).
+        if (hex[0] !== '#')
+            continue;
         const [nr, ng, nb] = hexToRgb(hex);
         const dist = Math.sqrt(Math.pow(r - nr, 2) + Math.pow(g - ng, 2) + Math.pow(b - nb, 2));
         if (dist < bestDist) {

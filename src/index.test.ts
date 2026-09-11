@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getColorType,
+  isHexColor,
+  rgbaStringToRgba,
   normalizeHex,
   hexToRgb,
   hexToHsl,
@@ -882,5 +884,86 @@ describe('generateShades', () => {
     const arr = [...generateShades('#3498db', 5)];
     const last = normalizeColor(arr[arr.length - 1]);
     expect(last.r ?? 255).toBeLessThan(15);
+  });
+});
+
+// ─── Regression tests: fabricated-color / parsing / gamut bug fixes ─────────
+
+describe('CSS-wide keywords with no fixed color (currentcolor/inherit/initial/unset)', () => {
+  it.each(['currentcolor', 'inherit', 'initial', 'unset'])(
+    'normalizeColor(%s) reports type "unknown", not a fabricated named color',
+    (kw) => {
+      const n = normalizeColor(kw);
+      expect(n.type).toBe('unknown');
+      expect(n.hex).toBeUndefined();
+      expect(n.r).toBeUndefined();
+    },
+  );
+  it.each(['currentcolor', 'inherit', 'initial', 'unset'])(
+    'getColorType(%s) is "unknown"',
+    (kw) => {
+      expect(getColorType(kw)).toBe('unknown');
+    },
+  );
+  it('transparent is still resolved as a real color (a: 0)', () => {
+    const n = normalizeColor('transparent');
+    expect(n.type).toBe('named');
+    expect(n.a).toBe(0);
+  });
+});
+
+describe('toNearestNamedColor no longer collapses onto the invalid-hex fallback', () => {
+  it('a color near the old #f5e477 fallback resolves to a real nearby named color, not "transparent"', () => {
+    expect(toNearestNamedColor('#f5e477')).not.toBe('transparent');
+  });
+});
+
+describe('colorShades / monochromatic with steps <= 1 (divide-by-zero guard)', () => {
+  it('colorShades(color, 1) returns one real hex, not "#NaNNaNNaN"', () => {
+    const result = colorShades('#3498db', 1);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatch(/^#[0-9a-f]{6}$/);
+  });
+  it('monochromatic(color, 1) returns one real hex, not "#NaNNaNNaN"', () => {
+    const result = monochromatic('#3498db', 1);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatch(/^#[0-9a-f]{6}$/);
+  });
+  it('colorShades(color, 0) returns an empty array', () => {
+    expect(colorShades('#3498db', 0)).toEqual([]);
+  });
+});
+
+describe('isHexColor / getColorType recognize 8-digit #rrggbbaa hex', () => {
+  it('isHexColor accepts an 8-digit hex string', () => {
+    expect(isHexColor('#ff0000ff')).toBe(true);
+  });
+  it('getColorType reports "hex" for an 8-digit hex string', () => {
+    expect(getColorType('#ff0000ff')).toBe('hex');
+  });
+});
+
+describe('rgbaStringToRgba clamps out-of-range channels and alpha', () => {
+  it('clamps channels above 255 and below 0', () => {
+    expect(rgbaStringToRgba('rgb(300, -20, 0)')).toEqual({ r: 255, g: 0, b: 0, a: 1 });
+  });
+  it('clamps alpha above 1', () => {
+    expect(rgbaStringToRgba('rgba(0, 0, 0, 2)')?.a).toBe(1);
+  });
+  it('a clamped out-of-range rgb() still normalizes to a well-formed hex', () => {
+    const n = normalizeColor('rgb(300, -20, 0)');
+    expect(n.hex).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+describe('color(srgb-linear ...) applies linear-to-sRGB gamma correction', () => {
+  it('a mid-range linear value is NOT treated as already gamma-encoded', () => {
+    const n = normalizeColor('color(srgb-linear 0.5 0 0)');
+    // Linear 0.5 gamma-encodes to ~188 (0.7354 * 255), not 128 (0.5 * 255).
+    expect(n.r).toBeGreaterThan(180);
+    expect(n.r).toBeLessThan(195);
+  });
+  it('the 0/1 extremes are unaffected (still #ff0000 for full red)', () => {
+    expect(normalizeColor('color(srgb-linear 1 0 0)').hex).toBe('#ff0000');
   });
 });
