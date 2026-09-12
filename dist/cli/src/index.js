@@ -1365,8 +1365,13 @@ function isReadableOnBackground(textColor, background, options) {
     const level = (_a = options === null || options === void 0 ? void 0 : options.level) !== null && _a !== void 0 ? _a : 'AA';
     const large = (_b = options === null || options === void 0 ? void 0 : options.largeText) !== null && _b !== void 0 ? _b : false;
     const minRequired = level === 'AAA' ? (large ? 4.5 : 7) : (large ? 3 : 4.5);
+    // The specific effective background color that minRatio was actually
+    // computed against — wcagLevel below is derived from this same color
+    // (never a hardcoded '#ffffff') so it can't disagree with minRatio/readable.
     let minRatio;
+    let effectiveBackground;
     if (typeof background === 'string') {
+        effectiveBackground = background;
         minRatio = contrastRatio(textColor, background);
     }
     else if (background.type === 'semi-transparent') {
@@ -1377,13 +1382,24 @@ function isReadableOnBackground(textColor, background, options) {
         const cr = Math.round(((_e = fg.r) !== null && _e !== void 0 ? _e : 0) * alpha + ((_f = bg.r) !== null && _f !== void 0 ? _f : 255) * (1 - alpha));
         const cg = Math.round(((_g = fg.g) !== null && _g !== void 0 ? _g : 0) * alpha + ((_h = bg.g) !== null && _h !== void 0 ? _h : 255) * (1 - alpha));
         const cb = Math.round(((_j = fg.b) !== null && _j !== void 0 ? _j : 0) * alpha + ((_k = bg.b) !== null && _k !== void 0 ? _k : 255) * (1 - alpha));
-        minRatio = contrastRatio(textColor, rgbToHex({ r: cr, g: cg, b: cb }));
+        effectiveBackground = rgbToHex({ r: cr, g: cg, b: cb });
+        minRatio = contrastRatio(textColor, effectiveBackground);
     }
     else {
-        const ratios = background.stops.map(stop => contrastRatio(textColor, stop));
-        minRatio = Math.min(...ratios);
+        // The worst-case stop (lowest ratio) drives both minRatio and wcagLevel.
+        let worstStop = background.stops[0];
+        let worstRatio = Infinity;
+        for (const stop of background.stops) {
+            const ratio = contrastRatio(textColor, stop);
+            if (ratio < worstRatio) {
+                worstRatio = ratio;
+                worstStop = stop;
+            }
+        }
+        effectiveBackground = worstStop;
+        minRatio = worstRatio;
     }
-    const wLevel = wcagLevel(textColor, typeof background === 'string' ? background : '#ffffff');
+    const wLevel = wcagLevel(textColor, effectiveBackground);
     return { readable: minRatio >= minRequired, minContrastRatio: +minRatio.toFixed(2), wcagLevel: wLevel };
 }
 function bestContrastPalette(background, palettes, options) {
