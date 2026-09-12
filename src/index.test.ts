@@ -759,6 +759,22 @@ describe('isReadableOnBackground', () => {
     expect(r).toHaveProperty('readable');
     expect(r).toHaveProperty('minContrastRatio');
   });
+  it('semi-transparent: wcagLevel reflects the real composited background, not a hardcoded white', () => {
+    // Regression: wcagLevel used to always be computed against '#ffffff',
+    // ignoring the actual composited color minContrastRatio/readable were
+    // computed from — here the overlay is nearly opaque black, so the real
+    // effective background is near-black. Black text on it is unreadable
+    // (fails outright), but the old code reported wcagLevel: 'AAA' (as if
+    // it were still black-on-white) despite readable: false — a direct
+    // contradiction between the three returned fields.
+    const r = isReadableOnBackground('#000000', {
+      type: 'semi-transparent',
+      color: 'rgba(0,0,0,0.9)',
+      underlay: '#ffffff',
+    });
+    expect(r.readable).toBe(false);
+    expect(r.wcagLevel).toBe('fail');
+  });
   it('gradient background checks all stops', () => {
     const r = isReadableOnBackground('#000000', {
       type: 'gradient',
@@ -766,6 +782,17 @@ describe('isReadableOnBackground', () => {
     });
     // black on black stop fails
     expect(r.minContrastRatio).toBeCloseTo(1, 0);
+  });
+  it('gradient: wcagLevel is derived from the worst-case stop, not a hardcoded white', () => {
+    // Regression: same mismatch as semi-transparent — wcagLevel used to
+    // always use '#ffffff' regardless of which stop actually drove
+    // minContrastRatio/readable.
+    const r = isReadableOnBackground('#000000', {
+      type: 'gradient',
+      stops: ['#ffffff', '#000000'],
+    });
+    expect(r.readable).toBe(false);
+    expect(r.wcagLevel).toBe('fail');
   });
   it('AAA level requires higher ratio', () => {
     const aa  = isReadableOnBackground('#767676', '#ffffff', { level: 'AA' });
