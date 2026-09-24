@@ -91,6 +91,24 @@ CommonJS:
 const { normalizeColor, mixColors } = require('color-value-tools')
 ```
 
+### Subpath imports
+
+Everything is available from the package root, but you can also import a single group by meaning. Both ESM and CommonJS are supported, with full TypeScript types.
+
+```ts
+import { hexToRgb, rgbToOklch, toOklchString } from 'color-value-tools/convert'
+import { wcagLevel, simulateColorBlindness } from 'color-value-tools/a11y'
+```
+
+| Subpath                        | Contents                                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `color-value-tools/parse`      | Type detection (`isHexColor`, `getColorType`, …), CSS string parsers, `normalizeColor`, `toNearestNamedColor`                               |
+| `color-value-tools/convert`    | Conversions between hex, RGB, HSL, HSV, HWB, CMYK, Lab, LCH, Oklab, Oklch, Display P3; CSS string formatters                                |
+| `color-value-tools/manipulate` | `lighten`, `darken`, `saturate`, `desaturate`, `setAlpha`, `invertColor`, `grayscale`, `rotateHue`, `mixColors`                             |
+| `color-value-tools/palette`    | Harmonies, `colorShades`, `monochromatic`, `tints` / `shades` / `tones`, `interpolateColors`, `createColorScale`, `randomColor`, generators |
+| `color-value-tools/a11y`       | Luminance, contrast, WCAG checks, `colorDeltaE`, color blindness simulation                                                                 |
+| `color-value-tools/cache`      | `normalizeColorCached` and cache controls                                                                                                   |
+
 ### More examples
 
 #### What your palette looks like to a colorblind user

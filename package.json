@@ -1,6 +1,6 @@
 {
   "name": "color-value-tools",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Parse, convert and manipulate colors across hex, RGB, HSL, Lab, LCH, OKLCH and CMYK, with WCAG contrast checks and CSS variables. Zero dependencies.",
   "author": "macrulez <macrulezru@gmail.com> (https://macrulez.ru/en)",
   "license": "MIT",
@@ -12,18 +12,108 @@
   "bugs": {
     "url": "https://github.com/macrulezru/color-value-tools/issues"
   },
+  "type": "commonjs",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/cjs/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/cjs/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./parse": {
+      "import": {
+        "types": "./dist/esm/parse.d.ts",
+        "default": "./dist/esm/parse.js"
+      },
+      "require": {
+        "types": "./dist/cjs/parse.d.ts",
+        "default": "./dist/cjs/parse.js"
+      }
+    },
+    "./convert": {
+      "import": {
+        "types": "./dist/esm/convert/index.d.ts",
+        "default": "./dist/esm/convert/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/convert/index.d.ts",
+        "default": "./dist/cjs/convert/index.js"
+      }
+    },
+    "./manipulate": {
+      "import": {
+        "types": "./dist/esm/manipulate.d.ts",
+        "default": "./dist/esm/manipulate.js"
+      },
+      "require": {
+        "types": "./dist/cjs/manipulate.d.ts",
+        "default": "./dist/cjs/manipulate.js"
+      }
+    },
+    "./palette": {
+      "import": {
+        "types": "./dist/esm/palette.d.ts",
+        "default": "./dist/esm/palette.js"
+      },
+      "require": {
+        "types": "./dist/cjs/palette.d.ts",
+        "default": "./dist/cjs/palette.js"
+      }
+    },
+    "./a11y": {
+      "import": {
+        "types": "./dist/esm/a11y.d.ts",
+        "default": "./dist/esm/a11y.js"
+      },
+      "require": {
+        "types": "./dist/cjs/a11y.d.ts",
+        "default": "./dist/cjs/a11y.js"
+      }
+    },
+    "./cache": {
+      "import": {
+        "types": "./dist/esm/cache.d.ts",
+        "default": "./dist/esm/cache.js"
+      },
+      "require": {
+        "types": "./dist/cjs/cache.d.ts",
+        "default": "./dist/cjs/cache.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "parse": [
+        "dist/cjs/parse.d.ts"
+      ],
+      "convert": [
+        "dist/cjs/convert/index.d.ts"
+      ],
+      "manipulate": [
+        "dist/cjs/manipulate.d.ts"
+      ],
+      "palette": [
+        "dist/cjs/palette.d.ts"
+      ],
+      "a11y": [
+        "dist/cjs/a11y.d.ts"
+      ],
+      "cache": [
+        "dist/cjs/cache.d.ts"
+      ]
     }
   },
+  "sideEffects": false,
   "bin": {
-    "cvt": "./dist/cli/bin/cli.js"
+    "cvt": "./dist/cli/cli.js"
   },
   "files": [
     "dist",
@@ -34,9 +124,10 @@
     "node": ">=18"
   },
   "scripts": {
-    "prepublishOnly": "npm run build",
-    "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.cli.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}))\"",
-    "test": "vitest run"
+    "prepare": "npm run build",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.cli.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'},null,2)+'\\n')\"",
+    "test": "vitest run",
+    "format": "prettier --write ."
   },
   "keywords": [
     "color",
@@ -53,6 +144,7 @@
   ],
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "prettier": "^3.9.9",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }
