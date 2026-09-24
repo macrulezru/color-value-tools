@@ -14,7 +14,7 @@
  */
 var _a, _b, _c, _d, _e, _f, _g, _h;
 Object.defineProperty(exports, "__esModule", { value: true });
-const index_1 = require("../src/index");
+const color_value_tools_1 = require("color-value-tools");
 const args = process.argv.slice(2);
 function printUsage() {
     console.log(`
@@ -42,7 +42,7 @@ if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
 }
 const colorInput = args[0];
 const command = (_a = args[1]) !== null && _a !== void 0 ? _a : 'info';
-const normalized = (0, index_1.normalizeColor)(colorInput);
+const normalized = (0, color_value_tools_1.normalizeColor)(colorInput);
 if (normalized.type === 'unknown' || normalized.type === 'css-var') {
     console.error(`Error: Cannot resolve color "${colorInput}"`);
     if (normalized.type === 'css-var') {
@@ -64,11 +64,11 @@ function line(label, value) {
 }
 switch (command) {
     case 'info': {
-        const type = (0, index_1.getColorType)(colorInput);
-        const [h, s, l] = (0, index_1.rgbToHsl)({ r, g, b });
-        const [hv, sv, v] = (0, index_1.rgbToHsv)({ r, g, b });
-        const nearest = (0, index_1.toNearestNamedColor)(hex);
-        const textColor = (0, index_1.bestTextColor)(hex);
+        const type = (0, color_value_tools_1.getColorType)(colorInput);
+        const [h, s, l] = (0, color_value_tools_1.rgbToHsl)({ r, g, b });
+        const [hv, sv, v] = (0, color_value_tools_1.rgbToHsv)({ r, g, b });
+        const nearest = (0, color_value_tools_1.toNearestNamedColor)(hex);
+        const textColor = (0, color_value_tools_1.bestTextColor)(hex);
         console.log(`\nColor: ${colorInput}`);
         console.log('─'.repeat(40));
         line('Type:', type);
@@ -84,14 +84,14 @@ switch (command) {
         break;
     }
     case 'convert': {
-        const [h, s, l] = (0, index_1.rgbToHsl)({ r, g, b });
-        const [hv, sv, v] = (0, index_1.rgbToHsv)({ r, g, b });
-        const [hw, w, bw] = (0, index_1.rgbToHwb)({ r, g, b });
-        const lab = (0, index_1.rgbToLab)({ r, g, b });
-        const lch = (0, index_1.rgbToLch)({ r, g, b });
-        const oklab = (0, index_1.rgbToOklab)({ r, g, b });
-        const oklch = (0, index_1.rgbToOklch)({ r, g, b });
-        const cmyk = (0, index_1.rgbToCmyk)({ r, g, b });
+        const [h, s, l] = (0, color_value_tools_1.rgbToHsl)({ r, g, b });
+        const [hv, sv, v] = (0, color_value_tools_1.rgbToHsv)({ r, g, b });
+        const [hw, w, bw] = (0, color_value_tools_1.rgbToHwb)({ r, g, b });
+        const lab = (0, color_value_tools_1.rgbToLab)({ r, g, b });
+        const lch = (0, color_value_tools_1.rgbToLch)({ r, g, b });
+        const oklab = (0, color_value_tools_1.rgbToOklab)({ r, g, b });
+        const oklch = (0, color_value_tools_1.rgbToOklch)({ r, g, b });
+        const cmyk = (0, color_value_tools_1.rgbToCmyk)({ r, g, b });
         console.log(`\nConversions for: ${colorInput}`);
         console.log('─'.repeat(40));
         line('Hex:', hex);
@@ -117,14 +117,14 @@ switch (command) {
             console.error('Error: Please provide a background color. Usage: cvt <color> contrast <bg>');
             process.exit(1);
         }
-        const bg = (0, index_1.normalizeColor)(bgInput);
+        const bg = (0, color_value_tools_1.normalizeColor)(bgInput);
         if (bg.type === 'unknown' || bg.type === 'css-var') {
             console.error(`Error: Cannot resolve background color "${bgInput}"`);
             process.exit(1);
         }
         const bgHex = (_g = bg.hex) !== null && _g !== void 0 ? _g : '#000000';
-        const ratio = (0, index_1.contrastRatio)(hex, bgHex);
-        const level = (0, index_1.wcagLevel)(hex, bgHex);
+        const ratio = (0, color_value_tools_1.contrastRatio)(hex, bgHex);
+        const level = (0, color_value_tools_1.wcagLevel)(hex, bgHex);
         console.log(`\nContrast: ${colorInput} on ${bgInput}`);
         console.log('─'.repeat(40));
         line('Ratio:', `${fmt2(ratio)}:1`);
@@ -141,7 +141,7 @@ switch (command) {
             console.error('Error: steps must be a number >= 2');
             process.exit(1);
         }
-        const shades = (0, index_1.colorShades)(hex, steps);
+        const shades = (0, color_value_tools_1.colorShades)(hex, steps);
         console.log(`\nShades of ${colorInput} (${steps} steps):`);
         console.log('─'.repeat(40));
         shades.forEach((shade, i) => {
@@ -151,11 +151,11 @@ switch (command) {
         break;
     }
     case 'harmonies': {
-        const comp = (0, index_1.complement)(hex);
-        const tri = (0, index_1.triadic)(hex);
-        const ana = (0, index_1.analogous)(hex);
-        const split = (0, index_1.splitComplementary)(hex);
-        const tet = (0, index_1.tetradic)(hex);
+        const comp = (0, color_value_tools_1.complement)(hex);
+        const tri = (0, color_value_tools_1.triadic)(hex);
+        const ana = (0, color_value_tools_1.analogous)(hex);
+        const split = (0, color_value_tools_1.splitComplementary)(hex);
+        const tet = (0, color_value_tools_1.tetradic)(hex);
         console.log(`\nHarmonies for: ${colorInput}`);
         console.log('─'.repeat(40));
         line('Complement:', comp);
@@ -167,7 +167,7 @@ switch (command) {
         break;
     }
     case 'nearest': {
-        const name = (0, index_1.toNearestNamedColor)(hex);
+        const name = (0, color_value_tools_1.toNearestNamedColor)(hex);
         console.log(`\nNearest CSS named color for ${colorInput}:`);
         console.log('─'.repeat(40));
         line('Name:', name);

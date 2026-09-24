@@ -113,7 +113,7 @@
   },
   "sideEffects": false,
   "bin": {
-    "cvt": "./dist/cli/bin/cli.js"
+    "cvt": "./dist/cli/cli.js"
   },
   "files": [
     "dist",

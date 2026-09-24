@@ -34,7 +34,7 @@ import {
   splitComplementary,
   tetradic,
   toNearestNamedColor,
-} from '../src/index'
+} from 'color-value-tools'
 
 const args = process.argv.slice(2)
 
