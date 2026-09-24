@@ -36,7 +36,8 @@
   "scripts": {
     "prepublishOnly": "npm run build",
     "build": "tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json && tsc -p tsconfig.cli.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}))\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "format": "prettier --write ."
   },
   "keywords": [
     "color",
@@ -53,6 +54,7 @@
   ],
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "prettier": "^3.9.9",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }

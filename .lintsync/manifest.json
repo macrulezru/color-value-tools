@@ -1,0 +1,29 @@
+{
+  "prettier": {
+    "preset": "base",
+    "version": "0.1.0",
+    "configPath": ".prettierrc.json",
+    "managed": {
+      "semi": {
+        "presetValue": false,
+        "version": "0.1.0"
+      },
+      "singleQuote": {
+        "presetValue": true,
+        "version": "0.1.0"
+      },
+      "trailingComma": {
+        "presetValue": "all",
+        "version": "0.1.0"
+      },
+      "printWidth": {
+        "presetValue": 100,
+        "version": "0.1.0"
+      },
+      "tabWidth": {
+        "presetValue": 2,
+        "version": "0.1.0"
+      }
+    }
+  }
+}
